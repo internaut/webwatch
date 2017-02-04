@@ -13,7 +13,10 @@ import webwatch
 webwatch.MAIL_SENDER = 'webwatch@example.com'
 webwatch.MAIL_RECEIVER = 'notify_me@example.com'
 
+webwatch.init()
+
 webwatch.check_site('spiegel', 'http://www.spiegel.de/', 'div.teaser')
+
 webwatch.finish()
 """
 
@@ -42,21 +45,26 @@ checked URL: {url}
 """
 
 errors_occurred = False
+smtp_conn = None
 
-
-if SEND_MAIL:
-	try:
-		smtp_conn = smtplib.SMTP(MAIL_SMTP_HOST)
-	except smtplib.SMTPException:
-		errprint("error creating SMTP connection to host '%s'" % MAIL_SMTP_HOST)
-		sys.exit(255)
-else:
-	smtp_conn = None
+def init():
+	global smtp_conn
+	
+	if SEND_MAIL:
+		try:
+			smtp_conn = smtplib.SMTP(MAIL_SMTP_HOST)
+		except smtplib.SMTPException:
+			errprint("error creating SMTP connection to host '%s'" % MAIL_SMTP_HOST)
+			sys.exit(255)
+	else:
+		smtp_conn = None
 
 
 def errprint(*args, **kwargs):
-    print(*args, file=sys.stderr, **kwargs)
-    errors_occurred = True
+	global errors_occurred
+	
+	print(*args, file=sys.stderr, **kwargs)
+	errors_occurred = True
 
 
 def send_mail(status, label, url):
@@ -100,6 +108,7 @@ def check_site(label, url, selector, **kwargs):
 
 	if not elems:
 		send_mail("no elements for selector '%s'" % selector, label, url)
+		return
 
 	print("> condensing content from %d website element(s)" % len(elems))
 
