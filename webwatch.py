@@ -25,7 +25,7 @@ import smtplib
 import requests
 from bs4 import BeautifulSoup
 
-SEND_MAIL = False
+SEND_MAIL = True
 PREVSTATES_FILE = 'prevstates.pickle'
 
 MAIL_SMTP_HOST = 'localhost'
@@ -40,9 +40,12 @@ webwatch.py result - status is '{status}' for '{label}'
 checked URL: {url}
 """
 
+errors_occurred = False
+
 
 def errprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
+    errors_occurred = True
 
 
 def send_mail(status, label, url):
@@ -58,8 +61,7 @@ def send_mail(status, label, url):
 			smtp_conn.sendmail(MAIL_SENDER, [MAIL_RECEIVER], msg)         
 			smtp_conn.exit()
 		except smtplib.SMTPException:
-			errprint('error sending email via SMTP')
-			sys.exit(3)
+			errprint('error sending email via SMTP. wanted to send message: %s' % msg)
 	else:
 		print('- would send mail -')
 		print('sender:', MAIL_SENDER)
@@ -68,12 +70,20 @@ def send_mail(status, label, url):
 		print(msg)
 		print()
 
-def check_site(label, url, selector):
+
+def check_site(label, url, selector, **kwargs):
+	process_content_str = kwargs.pop('process_content_str', None)
+	custom_request = kwargs.pop('custom_request', None)
+
 	print("fetching website for '%s' from URL '%s'..." % (label, url))
-	r = requests.get(url)
+	
+	if custom_request:
+		r = custom_request(url)
+	else:
+		r = requests.get(url)
+	
 	if r.status_code > 399:
 		send_mail("problem fetching website - HTTP status code '%d'" % r.status_code, label, url)
-		sys.exit(1)
 
 	print("> parsing website content (selector is '%s')" % selector)
 	soup = BeautifulSoup(r.text, 'html.parser')
@@ -81,7 +91,6 @@ def check_site(label, url, selector):
 
 	if not elems:
 		send_mail("no elements for selector '%s'" % selector, label, url)
-		sys.exit(2)
 
 	print("> condensing content from %d website element(s)" % len(elems))
 
@@ -89,6 +98,12 @@ def check_site(label, url, selector):
 	for e in elems:
 		all_str.extend(e.stripped_strings)
 	content_str = ''.join(all_str)
+	
+	if process_content_str:
+		content_str = process_content_str(content_str)
+	
+	#print("> condensed content string:")
+	#print(content_str)
 
 	cur_hash = hashlib.sha256(content_str.encode()).hexdigest()
 
