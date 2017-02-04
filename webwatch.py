@@ -14,6 +14,7 @@ webwatch.MAIL_SENDER = 'webwatch@example.com'
 webwatch.MAIL_RECEIVER = 'notify_me@example.com'
 
 webwatch.check_site('spiegel', 'http://www.spiegel.de/', 'div.teaser')
+webwatch.finish()
 """
 
 import sys
@@ -43,6 +44,16 @@ checked URL: {url}
 errors_occurred = False
 
 
+if SEND_MAIL:
+	try:
+		smtp_conn = smtplib.SMTP(MAIL_SMTP_HOST)
+	except smtplib.SMTPException:
+		errprint("error creating SMTP connection to host '%s'" % MAIL_SMTP_HOST)
+		sys.exit(255)
+else:
+	smtp_conn = None
+
+
 def errprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
     errors_occurred = True
@@ -55,11 +66,9 @@ def send_mail(status, label, url):
 		label=label,
 		url=url)
 	
-	if SEND_MAIL:
+	if smtp_conn:
 		try:
-			smtp_conn = smtplib.SMTP(MAIL_SMTP_HOST)
-			smtp_conn.sendmail(MAIL_SENDER, [MAIL_RECEIVER], msg)         
-			smtp_conn.exit()
+			smtp_conn.sendmail(MAIL_SENDER, [MAIL_RECEIVER], msg)
 		except smtplib.SMTPException:
 			errprint('error sending email via SMTP. wanted to send message: %s' % msg)
 	else:
@@ -125,3 +134,8 @@ def check_site(label, url, selector, **kwargs):
 
 	prevstates[label] = cur_hash
 	pickle.dump(prevstates, open(PREVSTATES_FILE, 'wb'))
+
+
+def finish():
+	if smtp_conn:
+		smtp_conn.quit()
