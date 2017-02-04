@@ -3,6 +3,9 @@ Easy to use website monitoring script.
 Checks if certain parts of a website have changed in comparison to the last time
 the script was called. Best to use in cronjobs.
 
+The main function to use is check_site(label, url, selector). "selector" is the CSS
+selector for the website part(s) that you want to monitor.
+
 Example usage:
 
 import webwatch
