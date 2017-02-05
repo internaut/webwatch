@@ -1,5 +1,8 @@
 """
 Easy to use website monitoring script.
+
+Markus Konrad <post@mkonrad.net>, February 2017
+
 Checks if certain parts of a website have changed in comparison to the last time
 the script was called. Best to use in cronjobs.
 
@@ -29,12 +32,13 @@ import smtplib
 import requests
 from bs4 import BeautifulSoup
 
+
 SEND_MAIL = True
 PREVSTATES_FILE = 'prevstates.pickle'
 
 MAIL_SMTP_HOST = 'localhost'
-MAIL_SENDER = 'webwatch@mkonrad.net'
-MAIL_RECEIVER = 'post@mkonrad.net'
+MAIL_SENDER = 'webwatch@localhost'
+MAIL_RECEIVER = 'notify_me@localhost'
 
 MAIL_MESSAGE_TPL = """From: {sender}
 To: {receiver}
@@ -89,6 +93,19 @@ def send_mail(status, label, url):
 
 
 def check_site(label, url, selector, **kwargs):
+	"""
+	Check the website at *url* for changes. It will then scrape the website at *url*,
+	extract its textual contents at *selector* and generate a sha256 hash from these
+	contents. This hash will be compared with a hash that was generated at the previous
+	run and has been loaded from a pickle file *prevstates.pickle*. If it's not the same
+	hash, a notification email will be sent.
+	
+	additional optional arguments:
+	- process_content_str: a function to process the textual contents and transform it
+	                       in some way, e.g. stripping parts of the text
+    - custom_request: a function to generate a custom HTTP request with `url`. it must
+                      return a "requests" request object
+	"""
 	process_content_str = kwargs.pop('process_content_str', None)
 	custom_request = kwargs.pop('custom_request', None)
 
