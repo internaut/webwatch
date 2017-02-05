@@ -10,7 +10,7 @@ selector for the website part(s) that you want to monitor. It will then scrape t
 
 ### Example usage
 
-```
+```Python
 import webwatch
 
 webwatch.MAIL_SENDER = 'webwatch@example.com'
